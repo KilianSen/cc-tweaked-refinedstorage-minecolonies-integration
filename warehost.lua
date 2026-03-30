@@ -706,6 +706,26 @@ while true do
     elseif e[1] == "char" then
         if e[2] == "u" or e[2] == "U" then
             checkForUpdates()
+        elseif e[2] == "c" or e[2] == "C" then
+            os.cancelTimer(TIMER)
+            shell.run("config_editor.lua")
+            -- Reload config after editor closes
+            if fs.exists("config.json") then
+                local cf = fs.open("config.json", "r")
+                if cf then
+                    local data = cf.readAll()
+                    cf.close()
+                    local parsed = textutils.unserializeJSON(data)
+                    if parsed then
+                        for k, v in pairs(parsed) do config[k] = v end
+                        print("Config reloaded.")
+                    end
+                end
+            end
+            scanWorkRequests(monitors, bridge, config.storage_side)
+            current_run = config.time_between_runs
+            displayTimer(monitors, current_run)
+            TIMER = os.startTimer(1)
         end
     elseif e[1] == "monitor_touch" then
         local side = e[2]

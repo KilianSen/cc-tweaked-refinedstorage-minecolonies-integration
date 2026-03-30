@@ -300,6 +300,26 @@ if http then
 else
     cprint(" [X] http API is disabled. Please download warehost.lua manually.", colors.red)
 end
+
+cprint("Downloading config_editor.lua from GitHub...", colors.yellow)
+if http then
+    local ok, request = pcall(http.get, "https://raw.githubusercontent.com/KilianSen/cc-tweaked-refinedstorage-minecolonies-integration/main/config_editor.lua")
+    if ok and request then
+        local content = request.readAll()
+        request.close()
+
+        content = content:gsub('local VERSION = "GIT_HASH_PLACEHOLDER"', 'local VERSION = "' .. actual_version .. '"')
+
+        local f = fs.open("config_editor.lua", "w")
+        if f then
+            f.write(content)
+            f.close()
+            cprint(" [\\251] Downloaded config_editor.lua.", colors.green)
+        end
+    else
+        cprint(" [!] Could not download config_editor.lua (optional).", colors.orange)
+    end
+end
 print("")
 
 cprint("--- Generating config.json ---", colors.cyan)
