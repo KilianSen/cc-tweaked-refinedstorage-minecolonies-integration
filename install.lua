@@ -187,7 +187,28 @@ local inventories = {}
 local ok, names = pcall(periph.getNames)
 if ok and names then
     for _, side in ipairs(names) do
-        if periph.hasType(side, "inventory") then
+        local is_inv = false
+        if type(periph.hasType) == "function" then
+            pcall(function() is_inv = periph.hasType(side, "inventory") end)
+        end
+        if not is_inv then
+            local tStr = periph.getType(side) or ""
+            if tStr == "inventory" or tStr:find("chest") or tStr:find("barrel") or tStr:find("entangled") then
+                is_inv = true
+            else
+                local mList = periph.getMethods(side)
+                if mList then
+                    local ml, ms = false, false
+                    for _, m in ipairs(mList) do
+                        if m == "list" then ml = true end
+                        if m == "size" then ms = true end
+                    end
+                    is_inv = ml and ms
+                end
+            end
+        end
+
+        if is_inv then
             local types = {periph.getType(side)}
             local tStr = table.concat(types, ", ")
             table.insert(inventories, {side = side, type = tStr})
