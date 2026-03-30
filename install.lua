@@ -32,10 +32,47 @@ local function prompt(msg, default_val)
     return input
 end
 
+local periph = peripheral
+
+cprint("--- 1. Wireless Networking ---", colors.cyan)
+cprint("You can connect remote monitors & blocks using CC Wireless Modems.", colors.lightGray)
+local wireless_ans = prompt("Enable Wireless Peripherals? (y/N)", "N")
+local enable_wireless = wireless_ans:lower() == "y"
+local wireless_network = "warehouse_net"
+
+if enable_wireless then
+    cprint(" Make sure your remote computer is broadcasting its peripherals.", colors.white)
+    cprint(" (e.g. running 'wpp host <network_name>')", colors.lightGray)
+    wireless_network = prompt(" Enter your wireless network name", "warehouse_net")
+    
+    cprint(" Downloading CC-WirelessPeripheral...", colors.yellow)
+    if http then
+        local ok_http, req = pcall(http.get, "https://raw.githubusercontent.com/jdf221/CC-WirelessPeripheral/main/wpp.lua")
+        if ok_http and req then
+            local f = fs.open("wpp.lua", "w")
+            if f then
+                f.write(req.readAll())
+                f.close()
+            end
+            req.close()
+        end
+    end
+    local ok, wpp = pcall(require, "wpp")
+    if ok then
+        wpp.wireless.connect(wireless_network)
+        periph = wpp.peripheral
+        cprint(" [\251] Connected to wireless network!", colors.green)
+    else
+        cprint(" [X] Failed to setup wireless network. Falling back to local.", colors.red)
+        enable_wireless = false
+    end
+end
+print("")
+
 local function waitForPeripheral(pType, friendlyName)
     local first = true
     while true do
-        local p = peripheral.find(pType)
+        local p = periph.find(pType)
         if p then
             cprint(" [\251] " .. friendlyName .. " found!", colors.green)
             return p
@@ -49,10 +86,10 @@ local function waitForPeripheral(pType, friendlyName)
     end
 end
 
-cprint("--- 1. Peripheral Check ---", colors.cyan)
+cprint("--- 2. Peripheral Check ---", colors.cyan)
 cprint("Waiting for all required peripherals...", colors.lightGray)
 
-local use_monitor = prompt("Are you using a directly connected Monitor? (Type 'n' for headless or remote monitors) (Y/n)", "Y")
+local use_monitor = prompt("Are you using a Monitor? (Type 'n' for headless mode) (Y/n)", "Y")
 if use_monitor:lower() == "y" then
     waitForPeripheral("monitor", "Monitor")
 else
@@ -62,16 +99,16 @@ waitForPeripheral("rsBridge", "RS Bridge")
 waitForPeripheral("colonyIntegrator", "Colony Integrator")
 print("")
 
-cprint("--- 2. Storage Setup ---", colors.cyan)
+cprint("--- 3. Storage Setup ---", colors.cyan)
 cprint("Scanning for inventories (chests, entangled blocks, etc.)...", colors.lightGray)
 
 local inventories = {}
--- pcall around peripheral.getNames() to avoid crash if some peripheral is broken
-local ok, names = pcall(peripheral.getNames)
+-- pcall around periph.getNames() to avoid crash if some peripheral is broken
+local ok, names = pcall(periph.getNames)
 if ok and names then
     for _, side in ipairs(names) do
-        if peripheral.hasType(side, "inventory") then
-            local types = {peripheral.getType(side)}
+        if periph.hasType(side, "inventory") then
+            local types = {periph.getType(side)}
             local tStr = table.concat(types, ", ")
             table.insert(inventories, {side = side, type = tStr})
         end
@@ -110,22 +147,12 @@ if storage_side == "" then
 end
 print("")
 
-cprint("--- 3. Night Mode ---", colors.cyan)
+cprint("--- 4. Night Mode ---", colors.cyan)
 local ignore_night_ans = prompt("Pause processing during night time? (Saves server ticks) (Y/n)", "Y")
 local ignore_night = ignore_night_ans:lower() == "y"
 print("")
 
-cprint("--- 4. Wireless Setting ---", colors.cyan)
-cprint("You can connect remote monitors wirelessly using CC Wireless Modems.", colors.lightGray)
-local wireless_ans = prompt("Enable Wireless Peripherals? (y/N)", "N")
-local enable_wireless = wireless_ans:lower() == "y"
-local wireless_network = "warehouse_net"
-if enable_wireless then
-    cprint(" Make sure your remote computer is broadcasting its monitors.", colors.white)
-    cprint(" (e.g. running 'wpp host <network_name>')", colors.lightGray)
-    wireless_network = prompt("Enter your wireless network name", "warehouse_net")
-end
-print("")
+
 
 cprint("--- Downloading Scripts ---", colors.cyan)
 local url = "https://raw.githubusercontent.com/KilianSen/cc-tweaked-refinedstorage-minecolonies-integration/main/warehost.lua"
