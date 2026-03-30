@@ -136,17 +136,30 @@ end
 local periph = peripheral
 if config.enable_wireless then
     print("Setting up Wireless Peripherals...")
-    local ok, wpp = pcall(require, "wpp")
+    local ok, wpp, err = false, nil, nil
+    ok, wpp = pcall(require, "wpp")
+    if not ok then
+        ok, wpp = pcall(dofile, shell.resolve("wpp.lua"))
+        if not ok then err = wpp end
+    end
+
     if not ok then
         print("Downloading CC-WirelessPeripheral (wpp.lua)...")
         if http then
             local request = http.get("https://raw.githubusercontent.com/jdf221/CC-WirelessPeripheral/main/wpp.lua")
             if request then
                 local file = fs.open("wpp.lua", "w")
-                file.write(request.readAll())
-                file.close()
+                if file then
+                    file.write(request.readAll())
+                    file.close()
+                end
                 request.close()
                 ok, wpp = pcall(require, "wpp")
+                if not ok then
+                    err = wpp
+                    ok, wpp = pcall(dofile, shell.resolve("wpp.lua"))
+                    if not ok then err = wpp end
+                end
             else
                 print("ERROR: http request failed.")
             end
@@ -155,12 +168,13 @@ if config.enable_wireless then
         end
     end
 
-    if ok then
+    if ok and type(wpp) == "table" and wpp.wireless then
         wpp.wireless.connect(config.wireless_network)
         periph = wpp.peripheral
         print("Connected to wireless network: " .. config.wireless_network)
     else
         print("WARNING: Failed to load wireless API. Falling back to wired.")
+        if type(err) == "string" then print("Error: " .. err) end
     end
 end
 

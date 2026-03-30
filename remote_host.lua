@@ -65,8 +65,17 @@ if not fs.exists("wpp.lua") then
     end
 end
 
-local ok, wpp = pcall(require, "wpp")
-if not ok then error("Missing wpp.lua!") end
+local ok, wpp, err = false, nil, nil
+ok, wpp = pcall(require, "wpp")
+if not ok then
+    err = wpp
+    ok, wpp = pcall(dofile, shell.resolve("wpp.lua"))
+    if not ok then err = wpp end
+end
+
+if not ok or type(wpp) ~= "table" or not wpp.wireless then
+    error("Missing or invalid wpp.lua! Error: " .. tostring(err))
+end
 
 -- 3. Draw Dashboard
 term.clear()

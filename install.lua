@@ -130,13 +130,20 @@ if enable_wireless then
             req.close()
         end
     end
-    local ok, wpp = pcall(require, "wpp")
-    if ok then
+    local ok, wpp, err = false, nil, nil
+    ok, wpp = pcall(require, "wpp")
+    if not ok then
+        err = wpp
+        ok, wpp = pcall(dofile, shell.resolve("wpp.lua"))
+        if not ok then err = wpp end
+    end
+    if ok and type(wpp) == "table" and wpp.wireless then
         wpp.wireless.connect(wireless_network)
         periph = wpp.peripheral
         cprint(" [\251] Connected to wireless network!", colors.green)
     else
         cprint(" [X] Failed to setup wireless network. Falling back to local.", colors.red)
+        if type(err) == "string" then cprint("     Error: " .. err, colors.orange) end
         enable_wireless = false
     end
 end
