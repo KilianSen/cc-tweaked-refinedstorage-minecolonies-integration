@@ -287,6 +287,7 @@ function displayTimer(monitors, t)
 
     for _, mon in ipairs(monitors) do
         local w, h = mon.getSize()
+        if not w then goto timer_continue end
         mon.setCursorPos(1, 1)
         mon.setBackgroundColor(colors.gray)
         mon.write(string.rep(" ", w))
@@ -303,6 +304,7 @@ function displayTimer(monitors, t)
         end
         mPrintRowJustified(mon, 1, "right", rem_str, timer_color, colors.gray)
         mon.setBackgroundColor(colors.black)
+        ::timer_continue::
     end
 end
 
