@@ -51,15 +51,18 @@ local function checkForUpdates()
                 end
 
                 local pattern = 'local VER' .. 'SION = "[^"]+"'
-                local clean_remote = remote_code:gsub(pattern, 'local VER'..'SION = "temp"')
-                local clean_current = current_code:gsub(pattern, 'local VER'..'SION = "temp"')
-                
+                local clean_remote = remote_code:gsub(pattern, 'local VER' .. 'SION = "temp"')
+                local clean_current = current_code:gsub(pattern, 'local VER' .. 'SION = "temp"')
+
                 if clean_remote ~= clean_current then
-                    local ph_pattern = 'local VER'..'SION = "GIT_HASH_PLACEHOLDER"'
-                    remote_code = remote_code:gsub(ph_pattern, 'local VER'..'SION = "' .. new_hash .. '"')
-                    
+                    local ph_pattern = 'local VER' .. 'SION = "GIT_HASH_PLACEHOLDER"'
+                    remote_code = remote_code:gsub(ph_pattern, 'local VER' .. 'SION = "' .. new_hash .. '"')
+
                     local out = fs.open(program_path, "w")
-                    if out then out.write(remote_code); out.close() end
+                    if out then
+                        out.write(remote_code)
+                        out.close()
+                    end
                     os.sleep(1)
                     os.reboot()
                 end
@@ -108,7 +111,7 @@ cprint(" Host ID    : " .. os.getComputerID(), colors.lightGray)
 term.setCursorPos(1, 12)
 cprint(" Attached Monitors:", colors.white)
 local monitors = {}
-for i, m in ipairs(peripheral.getNames()) do
+for _, m in ipairs(peripheral.getNames()) do
     if peripheral.getType(m) == "monitor" then
         cprint("  - " .. m, colors.lightGray)
         table.insert(monitors, m)
@@ -132,24 +135,23 @@ drawMetrics(eventsHandled, uptime)
 -- 5. Infinite Event Loop
 while true do
     local e = {os.pullEvent()}
-    
+
     if e[1] == "timer" and e[2] == TIMER then
         uptime = uptime + 1
         drawMetrics(eventsHandled, uptime)
         TIMER = os.startTimer(1)
-        
+
         -- Auto update check every real world hour (3600 seconds)
         if uptime % 3600 == 0 then
             checkForUpdates()
         end
-
     elseif e[1] == "char" and (e[2] == "u" or e[2] == "U") then
         checkForUpdates()
     elseif e[1] == "rednet_message" and e[4] == "wpp@" .. network then
         eventsHandled = eventsHandled + 1
         drawMetrics(eventsHandled, uptime)
     end
-    
+
     -- Pass payload to wpp handler
     wpp.wireless.localEventHandler(e)
 end
