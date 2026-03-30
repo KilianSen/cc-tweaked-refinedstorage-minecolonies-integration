@@ -52,7 +52,12 @@ end
 cprint("--- 1. Peripheral Check ---", colors.cyan)
 cprint("Waiting for all required peripherals...", colors.lightGray)
 
-waitForPeripheral("monitor", "Monitor")
+local use_monitor = prompt("Are you using a directly connected Monitor? (Type 'n' for headless or remote monitors) (Y/n)", "Y")
+if use_monitor:lower() == "y" then
+    waitForPeripheral("monitor", "Monitor")
+else
+    cprint(" [!] Skipping monitor verification.", colors.orange)
+end
 waitForPeripheral("rsBridge", "RS Bridge")
 waitForPeripheral("colonyIntegrator", "Colony Integrator")
 print("")

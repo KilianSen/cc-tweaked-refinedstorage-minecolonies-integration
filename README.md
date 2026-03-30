@@ -36,10 +36,10 @@ The installer will:
 To run the system, you must physically connect the following blocks to your computer (either adjacently or via Wired Modems):
 
 1. **Computer** or **Advanced Computer**
-2. **Monitor(s)** (Advanced Monitors recommended; a 3x3 screen works excellently).
-3. **Colony Integrator** (from Advanced Peripherals, placed inside your colony boundaries).
-4. **RS Bridge** (from Advanced Peripherals, connected to your Refined Storage network).
-5. A **Storage Container** (e.g. Minecraft Chest, Entangled Block). This container should be connected to the Minecolonies Warehouse Hut block so builders can access delivered items.
+2. **Colony Integrator** (from Advanced Peripherals, placed inside your colony boundaries).
+3. **RS Bridge** (from Advanced Peripherals, connected to your Refined Storage network).
+4. A **Storage Container** (e.g. Minecraft Chest, Entangled Block). This container should be connected to the Minecolonies Warehouse Hut block so builders can access delivered items.
+5. *(Optional)* **Monitor(s)** (Advanced Monitors recommended; a 3x3 screen works excellently). The installer supports wireless/remote monitors if you're using AP's wireless network, or you can run completely monitor-less (Headless Mode) to save space!
 
 ---
 

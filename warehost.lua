@@ -86,7 +86,7 @@ end
 -- AUTO UPDATER
 ----------------------------------------------------------------------------
 
-if config.enable_auto_update then
+local function checkForUpdates()
     print("Checking for updates...")
     if http then
         local url = "https://raw.githubusercontent.com/KilianSen/cc-tweaked-refinedstorage-minecolonies-integration/main/warehost.lua"
@@ -112,7 +112,7 @@ if config.enable_auto_update then
                     print("Update complete! Restarting script...")
                     os.sleep(1)
                     shell.run(program_path)
-                    return
+                    os.exit()
                 end
             else
                 print("Script is up to date.")
@@ -123,6 +123,10 @@ if config.enable_auto_update then
     else
         print("WARNING: http API is disabled. Auto-updater cannot run.")
     end
+end
+
+if config.enable_auto_update then
+    checkForUpdates()
 end
 
 ----------------------------------------------------------------------------
@@ -167,14 +171,17 @@ end
 -- Initialize Monitor(s)
 -- Multiple monitors are supported to separate the lists logically.
 local monitors = { periph.find("monitor") }
-if #monitors == 0 then error("Monitor not found.") end
-for _, mon in ipairs(monitors) do
-    mon.setTextScale(0.5)
-    mon.clear()
-    mon.setCursorPos(1, 1)
-    mon.setCursorBlink(false)
+if #monitors == 0 then 
+    print("No monitors found. Running in headless mode.") 
+else
+    for _, mon in ipairs(monitors) do
+        mon.setTextScale(0.5)
+        mon.clear()
+        mon.setCursorPos(1, 1)
+        mon.setCursorBlink(false)
+    end
+    print(#monitors .. " Monitor(s) initialized.")
 end
-print(#monitors .. " Monitor(s) initialized.")
 
 -- Initialize RS Bridge
 local bridge = periph.find("rsBridge")
@@ -252,6 +259,8 @@ function displayTimer(monitors, t)
 
         local time_str = string.format(" Time: %s [%-7s]", textutils.formatTime(now, false), cycle)
         mPrintRowJustified(mon, 1, "left", time_str, cycle_color, colors.gray)
+
+        mPrintRowJustified(mon, 1, "center", "[Update]", colors.lightBlue, colors.gray)
 
         local rem_str = "Paused "
         if not config.ignore_night or cycle ~= "night" then 
@@ -548,27 +557,29 @@ function scanWorkRequests(monitors, rs, chest)
     local m_idx = 1
     local row = 3
 
-    if #equipment_list > 0 then
-        row = drawCategory(monitors[m_idx], "Equipment", equipment_list, row)
-    end
-
-    if #builder_list > 0 then
-        if #monitors > 1 then
-            m_idx = 2
-            row = 3
+    if #monitors > 0 then
+        if #equipment_list > 0 then
+            row = drawCategory(monitors[m_idx], "Equipment", equipment_list, row)
         end
-        row = drawCategory(monitors[m_idx], "Builder Requests", builder_list, row)
-    end
 
-    if #nonbuilder_list > 0 then
-        if #monitors > 2 then
-            m_idx = 3
-            row = 3
-        elseif #monitors == 2 and #builder_list == 0 then
-            m_idx = 2
-            row = 3
+        if #builder_list > 0 then
+            if #monitors > 1 then
+                m_idx = 2
+                row = 3
+            end
+            row = drawCategory(monitors[m_idx], "Builder Requests", builder_list, row)
         end
-        row = drawCategory(monitors[m_idx], "Nonbuilder Requests", nonbuilder_list, row)
+
+        if #nonbuilder_list > 0 then
+            if #monitors > 2 then
+                m_idx = 3
+                row = 3
+            elseif #monitors == 2 and #builder_list == 0 then
+                m_idx = 2
+                row = 3
+            end
+            row = drawCategory(monitors[m_idx], "Nonbuilder Requests", nonbuilder_list, row)
+        end
     end
 
     for _, mon in ipairs(monitors) do
@@ -587,7 +598,7 @@ function scanWorkRequests(monitors, rs, chest)
         mon.setBackgroundColor(colors.black)
     end
 
-    if #equipment_list == 0 and #builder_list == 0 and #nonbuilder_list == 0 then
+    if #monitors > 0 and #equipment_list == 0 and #builder_list == 0 and #nonbuilder_list == 0 then
         local mon = monitors[1]
         local mon_width, mon_height = mon.getSize()
         local r = chest_full and 4 or 3
@@ -637,11 +648,35 @@ while true do
         end
         displayTimer(monitors, current_run)
         TIMER = os.startTimer(1)
+    elseif e[1] == "char" then
+        if e[2] == "u" or e[2] == "U" then
+            checkForUpdates()
+        end
     elseif e[1] == "monitor_touch" then
-        os.cancelTimer(TIMER)
-        scanWorkRequests(monitors, bridge, config.storage_side)
-        current_run = config.time_between_runs
-        displayTimer(monitors, current_run)
-        TIMER = os.startTimer(1)
+        local side = e[2]
+        local x = e[3]
+        local y = e[4]
+        
+        local is_update_click = false
+        if y == 1 then
+            local mon = peripheral.wrap(side)
+            if mon then
+                local w = mon.getSize()
+                local center_x = math.floor((w - #"[Update]") / 2) + 1
+                if x >= center_x and x < center_x + #"[Update]" then
+                    is_update_click = true
+                end
+            end
+        end
+
+        if is_update_click then
+            checkForUpdates()
+        else
+            os.cancelTimer(TIMER)
+            scanWorkRequests(monitors, bridge, config.storage_side)
+            current_run = config.time_between_runs
+            displayTimer(monitors, current_run)
+            TIMER = os.startTimer(1)
+        end
     end
 end
