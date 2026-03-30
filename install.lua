@@ -1,5 +1,22 @@
 -- install.lua
 -- Auto-setup script for Warehost
+local VERSION = "GIT_HASH_PLACEHOLDER"
+
+local function getLatestHash()
+    if not http then return "unknown" end
+    local ok, req = pcall(http.get, "https://api.github.com/repos/KilianSen/cc-tweaked-refinedstorage-minecolonies-integration/commits/main")
+    if ok and req then
+        local data = textutils.unserializeJSON(req.readAll())
+        req.close()
+        if data and data.sha then return data.sha:sub(1, 7) end
+    end
+    return "unknown"
+end
+
+local actual_version = getLatestHash()
+if VERSION == "GIT_HASH_PLACEHOLDER" then
+    VERSION = actual_version
+end
 
 local function cprint(text, color)
     if term.isColor() then
@@ -16,7 +33,7 @@ end
 term.clear()
 term.setCursorPos(1, 1)
 cprint("==========================================", colors.cyan)
-cprint("    Warehost Auto-Setup & Debugger", colors.yellow)
+cprint("    Warehost Auto-Setup & Debugger v" .. VERSION, colors.yellow)
 cprint("==========================================", colors.cyan)
 print("")
 
@@ -66,7 +83,9 @@ if mode == "2" then
         if ok_http and req then
             local f = fs.open("remote_host.lua", "w")
             if f then
-                f.write(req.readAll())
+                local content = req.readAll()
+                content = content:gsub('local VERSION = "GIT_HASH_PLACEHOLDER"', 'local VERSION = "' .. actual_version .. '"')
+                f.write(content)
                 f.close()
             end
             req.close()
@@ -264,6 +283,8 @@ if http then
     if ok and request then
         local content = request.readAll()
         request.close()
+        
+        content = content:gsub('local VERSION = "GIT_HASH_PLACEHOLDER"', 'local VERSION = "' .. actual_version .. '"')
         
         local f = fs.open("warehost.lua", "w")
         if f then

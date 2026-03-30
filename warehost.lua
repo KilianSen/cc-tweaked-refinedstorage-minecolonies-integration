@@ -25,6 +25,8 @@
 -- skip_patterns / skip_exact: Items that should be manually provided.
 -- time_between_runs: Time in seconds between work order scans.
 
+local VERSION = "GIT_HASH_PLACEHOLDER"
+
 ----------------------------------------------------------------------------
 -- CONFIGURATION
 ----------------------------------------------------------------------------
@@ -103,16 +105,31 @@ local function checkForUpdates()
                 local_file.close()
             end
             
-            if remote_code and #remote_code > 0 and remote_code ~= current_code then
-                print("Update found! Applying update...")
-                local out_file = fs.open(program_path, "w")
+            if remote_code and #remote_code > 0 then
+                local new_hash = "unknown"
+                local api_req = http.get("https://api.github.com/repos/KilianSen/cc-tweaked-refinedstorage-minecolonies-integration/commits/main")
+                if api_req then
+                    local data = textutils.unserializeJSON(api_req.readAll())
+                    api_req.close()
+                    if data and data.sha then new_hash = data.sha:sub(1, 7) end
+                end
+
+                local pattern = 'local VER' .. 'SION = "[^"]+"'
+                local clean_remote = remote_code:gsub(pattern, 'local VER'..'SION = "temp"')
+                local clean_current = current_code:gsub(pattern, 'local VER'..'SION = "temp"')
+                
+                if clean_remote ~= clean_current then
+                    local ph_pattern = 'local VER'..'SION = "GIT_HASH_PLACEHOLDER"'
+                    remote_code = remote_code:gsub(ph_pattern, 'local VER'..'SION = "' .. new_hash .. '"')
+                    
+                    print("Update found! Applying update...")
+                    local out_file = fs.open(program_path, "w")
                 if out_file then
                     out_file.write(remote_code)
                     out_file.close()
                     print("Update complete! Restarting script...")
                     os.sleep(1)
-                    shell.run(program_path)
-                    os.exit()
+                    os.reboot()
                 end
             else
                 print("Script is up to date.")
@@ -274,7 +291,8 @@ function displayTimer(monitors, t)
         local time_str = string.format(" Time: %s [%-7s]", textutils.formatTime(now, false), cycle)
         mPrintRowJustified(mon, 1, "left", time_str, cycle_color, colors.gray)
 
-        mPrintRowJustified(mon, 1, "center", "[Update]", colors.lightBlue, colors.gray)
+        local update_text = "[Update v" .. VERSION .. "]"
+        mPrintRowJustified(mon, 1, "center", update_text, colors.lightBlue, colors.gray)
 
         local rem_str = "Paused "
         if not config.ignore_night or cycle ~= "night" then 
@@ -295,6 +313,7 @@ end
 -- Blue means the Player needs to manually fill the work order.  This includes
 -- equipment (Tools of Class), NBT items like armor, weapons and tools, as well
 -- as generic requests ike Compostables, Fuel, Food, Flowers, etc.
+local session_exports = {}
 function scanWorkRequests(monitors, rs, chest)
     -- Before we do anything, prep the log file for this scan.
     -- The log file is truncated each time this function is called.
@@ -363,12 +382,17 @@ function scanWorkRequests(monitors, rs, chest)
     if file then
         pcall(function() file.write(textutils.serialize(workRequests, { allow_repetitions = true })) end)
     end
+    local active_ids = {}
     for w, request in ipairs(workRequests) do
+        local req_id = request.id or (request.name .. (request.target or "") .. (request.desc or ""))
+        active_ids[req_id] = true
         local name = request.name or "Unknown"
         local desc = request.desc or ""
         local target = request.target or ""
-        local needed = request.count or 1
-        local provided = 0
+        local total_needed = request.count or 1
+        local session_provided = session_exports[req_id] or 0
+        local needed = math.max(0, total_needed - session_provided)
+        local new_provided = 0
 
         -- Guard against requests with no items
         if type(request.items) ~= "table" or not request.items[1] then
@@ -454,16 +478,18 @@ function scanWorkRequests(monitors, rs, chest)
             
             if chest_full then
                 -- Skip API calls if the chest is undeniably full
-                provided = 0
-            elseif stock_available > 0 then
+                new_provided = 0
+            elseif needed > 0 and stock_available > 0 then
                 local ok_export, result = pcall(rs.exportItemToPeripheral, {name=item, count=needed}, chest)
-                if ok_export and type(result) == "number" then provided = result end
-                item_array[item] = stock_available - provided
+                if ok_export and type(result) == "number" then new_provided = result end
+                item_array[item] = math.max(0, stock_available - new_provided)
             end
+            
+            session_exports[req_id] = session_provided + new_provided
 
             color = colors.green
-            if provided < needed then
-                local missing_to_craft = math.max(0, needed - provided - get_rs_stock(item))
+            if session_exports[req_id] < total_needed then
+                local missing_to_craft = math.max(0, total_needed - session_exports[req_id] - get_rs_stock(item))
 
                 if missing_to_craft > 0 then
                     local is_crafting = check_crafting(item)
@@ -484,15 +510,20 @@ function scanWorkRequests(monitors, rs, chest)
                         end
                     end
                 else
-                    color = colors.red
-                    chest_full = true
-                    print("[Export Failed]", needed - provided, "x", item, "(Chest Full)")
+                    if new_provided == 0 and needed > 0 then
+                        color = colors.red
+                        chest_full = true
+                        print("[Export Failed]", total_needed - session_exports[req_id], "x", item, "(Chest Full)")
+                    else
+                        color = colors.yellow
+                    end
                 end
             end
         else
             local nameString = name .. " [" .. target .. "]"
             print("[Skipped]", nameString)
         end
+        local provided = session_exports[req_id] or 0
 
         if string.find(desc, "of class", 1, true) then
             local level = "Any Level"
@@ -506,17 +537,24 @@ function scanWorkRequests(monitors, rs, chest)
             local new_name = level .. " " .. name
             if level == "Any Level" then new_name = name .. " of any level" end
             local new_target = target_length < 3 and target or target_type .. " " .. target_name
-            local equipment = { name=new_name, target=new_target, needed=needed, provided=provided, color=color}
+            local equipment = { name=new_name, target=new_target, needed=total_needed, provided=provided, color=color}
             table.insert(equipment_list, equipment)
         elseif string.find(target, "Builder", 1, true) then
-            local builder = { name=name, item=item, target=target_name, needed=needed, provided=provided, color=color }
+            local builder = { name=name, item=item, target=target_name, needed=total_needed, provided=provided, color=color }
             table.insert(builder_list, builder)
         else
             local new_target = target_length < 3 and target or target_type .. " " .. target_name
-            local nonbuilder = { name=name, target=new_target, needed=needed, provided=provided, color=color }
+            local nonbuilder = { name=name, target=new_target, needed=total_needed, provided=provided, color=color }
             table.insert(nonbuilder_list, nonbuilder)
         end
         ::continue::
+    end
+
+    -- Cleanup cache
+    for id, _ in pairs(session_exports) do
+        if not active_ids[id] then
+            session_exports[id] = nil
+        end
     end
 
     -- Show the various lists on the attached monitor(s).
@@ -673,11 +711,12 @@ while true do
         
         local is_update_click = false
         if y == 1 then
-            local mon = peripheral.wrap(side)
+            local mon = periph.wrap(side)
             if mon then
                 local w = mon.getSize()
-                local center_x = math.floor((w - #"[Update]") / 2) + 1
-                if x >= center_x and x < center_x + #"[Update]" then
+                local update_text = "[Update v" .. VERSION .. "]"
+                local center_x = math.floor((w - #update_text) / 2) + 1
+                if x >= center_x and x < center_x + #update_text then
                     is_update_click = true
                 end
             end

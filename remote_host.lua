@@ -1,6 +1,8 @@
 -- remote_host.lua
 -- Auto-updater, WPP wrapper, and dashboard for Warehost Remote Monitors
 
+local VERSION = "GIT_HASH_PLACEHOLDER"
+
 local args = {...}
 local network = args[1] or "warehouse_net"
 
@@ -39,12 +41,27 @@ local function checkForUpdates()
                 current_code = local_file.readAll()
                 local_file.close()
             end
-            if remote_code and #remote_code > 0 and remote_code ~= current_code then
-                local out = fs.open(program_path, "w")
+            if remote_code and #remote_code > 0 then
+                local new_hash = "unknown"
+                local api_req = http.get("https://api.github.com/repos/KilianSen/cc-tweaked-refinedstorage-minecolonies-integration/commits/main")
+                if api_req then
+                    local data = textutils.unserializeJSON(api_req.readAll())
+                    api_req.close()
+                    if data and data.sha then new_hash = data.sha:sub(1, 7) end
+                end
+
+                local pattern = 'local VER' .. 'SION = "[^"]+"'
+                local clean_remote = remote_code:gsub(pattern, 'local VER'..'SION = "temp"')
+                local clean_current = current_code:gsub(pattern, 'local VER'..'SION = "temp"')
+                
+                if clean_remote ~= clean_current then
+                    local ph_pattern = 'local VER'..'SION = "GIT_HASH_PLACEHOLDER"'
+                    remote_code = remote_code:gsub(ph_pattern, 'local VER'..'SION = "' .. new_hash .. '"')
+                    
+                    local out = fs.open(program_path, "w")
                 if out then out.write(remote_code); out.close() end
                 os.sleep(1)
-                shell.run(program_path, unpack(args))
-                os.exit()
+                os.reboot()
             end
         end
     end
@@ -82,7 +99,7 @@ term.clear()
 term.setCursorPos(1, 1)
 
 cprint("==========================================", colors.cyan)
-cprint("    Warehost Remote Monitor Server", colors.white)
+cprint("    Warehost Remote Monitor Server v" .. VERSION, colors.white)
 cprint("==========================================", colors.cyan)
 cprint(" Network ID : " .. network, colors.lightGray)
 cprint(" Host ID    : " .. os.getComputerID(), colors.lightGray)
