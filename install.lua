@@ -116,10 +116,13 @@ local ignore_night = ignore_night_ans:lower() == "y"
 print("")
 
 cprint("--- 4. Wireless Setting ---", colors.cyan)
-local wireless_ans = prompt("Are you using Advanced Peripherals Wireless functionality? (y/N)", "N")
+cprint("You can connect remote monitors wirelessly using CC Wireless Modems.", colors.lightGray)
+local wireless_ans = prompt("Enable Wireless Peripherals? (y/N)", "N")
 local enable_wireless = wireless_ans:lower() == "y"
 local wireless_network = "warehouse_net"
 if enable_wireless then
+    cprint(" Make sure your remote computer is broadcasting its monitors.", colors.white)
+    cprint(" (e.g. running 'wpp host <network_name>')", colors.lightGray)
     wireless_network = prompt("Enter your wireless network name", "warehouse_net")
 end
 print("")
