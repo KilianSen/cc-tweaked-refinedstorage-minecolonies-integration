@@ -60,23 +60,23 @@ if mode == "2" then
         return
     end
 
-    cprint(" Downloading CC-WirelessPeripheral...", colors.yellow)
+    cprint(" Downloading remote_host.lua...", colors.yellow)
     if http then
-        local ok_http, req = pcall(http.get, "https://raw.githubusercontent.com/jdf221/CC-WirelessPeripheral/main/wpp.lua")
+        local ok_http, req = pcall(http.get, "https://raw.githubusercontent.com/KilianSen/cc-tweaked-refinedstorage-minecolonies-integration/main/remote_host.lua")
         if ok_http and req then
-            local f = fs.open("wpp.lua", "w")
+            local f = fs.open("remote_host.lua", "w")
             if f then
                 f.write(req.readAll())
                 f.close()
             end
             req.close()
-            cprint(" [\251] Downloaded wpp.lua!", colors.green)
+            cprint(" [\251] Downloaded remote_host.lua!", colors.green)
         else
-            cprint(" [X] Failed to download wpp.lua. Cannot continue.", colors.red)
+            cprint(" [X] Failed to download remote_host.lua. Cannot continue.", colors.red)
             return
         end
     else
-        cprint(" [X] HTTP API is disabled! Cannot download wpp.lua.", colors.red)
+        cprint(" [X] HTTP API is disabled! Cannot download remote_host.lua.", colors.red)
         return
     end
     print("")
@@ -88,7 +88,7 @@ if mode == "2" then
 
     local sf = fs.open("startup.lua", "w")
     if sf then
-        sf.write('shell.run("wpp", "host", "' .. network_name .. '")\n')
+        sf.write('shell.run("remote_host.lua", "' .. network_name .. '")\n')
         sf.close()
         cprint(" [\251] startup.lua created! (will auto-host on reboot)", colors.green)
     end
@@ -99,7 +99,7 @@ if mode == "2" then
     cprint("==========================================", colors.cyan)
     os.sleep(1)
 
-    shell.run("wpp", "host", network_name)
+    shell.run("remote_host.lua", network_name)
     return
 end
 
