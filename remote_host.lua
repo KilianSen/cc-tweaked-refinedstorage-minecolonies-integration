@@ -59,9 +59,10 @@ local function checkForUpdates()
                     remote_code = remote_code:gsub(ph_pattern, 'local VER'..'SION = "' .. new_hash .. '"')
                     
                     local out = fs.open(program_path, "w")
-                if out then out.write(remote_code); out.close() end
-                os.sleep(1)
-                os.reboot()
+                    if out then out.write(remote_code); out.close() end
+                    os.sleep(1)
+                    os.reboot()
+                end
             end
         end
     end

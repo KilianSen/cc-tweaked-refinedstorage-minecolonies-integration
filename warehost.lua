@@ -124,15 +124,18 @@ local function checkForUpdates()
                     
                     print("Update found! Applying update...")
                     local out_file = fs.open(program_path, "w")
-                if out_file then
-                    out_file.write(remote_code)
-                    out_file.close()
-                    print("Update complete! Restarting script...")
-                    os.sleep(1)
-                    os.reboot()
+                    if out_file then
+                        out_file.write(remote_code)
+                        out_file.close()
+                        print("Update complete! Restarting script...")
+                        os.sleep(1)
+                        os.reboot()
+                    end
+                else
+                    print("Script is up to date.")
                 end
             else
-                print("Script is up to date.")
+                print("Script is up to date or empty.")
             end
         else
             print("WARNING: Could not reach GitHub for updates.")
