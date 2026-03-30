@@ -32,6 +32,77 @@ local function prompt(msg, default_val)
     return input
 end
 
+cprint("Select Installation Mode:", colors.cyan)
+cprint(" 1) Main Warehost Server (Coordinates RS & Minecolonies)", colors.lightGray)
+cprint(" 2) Remote Monitor Client (Hosts Wireless Monitors)", colors.lightGray)
+local mode = ""
+while mode ~= "1" and mode ~= "2" do
+    mode = prompt("Enter 1 or 2", "1")
+end
+print("")
+
+if mode == "2" then
+    cprint("--- Remote Monitor Setup ---", colors.cyan)
+    local has_modem = false
+    for _, name in ipairs(peripheral.getNames()) do
+        if peripheral.getType(name) == "modem" then
+            local m = peripheral.wrap(name)
+            if m.isWireless() then
+                has_modem = true
+                break
+            end
+        end
+    end
+
+    if not has_modem then
+        cprint(" [X] No Wireless Modem found!", colors.red)
+        cprint(" Please attach an Ender or Wireless Modem and run this again.", colors.orange)
+        return
+    end
+
+    cprint(" Downloading CC-WirelessPeripheral...", colors.yellow)
+    if http then
+        local ok_http, req = pcall(http.get, "https://raw.githubusercontent.com/jdf221/CC-WirelessPeripheral/main/wpp.lua")
+        if ok_http and req then
+            local f = fs.open("wpp.lua", "w")
+            if f then
+                f.write(req.readAll())
+                f.close()
+            end
+            req.close()
+            cprint(" [\251] Downloaded wpp.lua!", colors.green)
+        else
+            cprint(" [X] Failed to download wpp.lua. Cannot continue.", colors.red)
+            return
+        end
+    else
+        cprint(" [X] HTTP API is disabled! Cannot download wpp.lua.", colors.red)
+        return
+    end
+    print("")
+
+    local player_name = prompt("What is your Player Name?", "Player")
+    local default_network = player_name .. "_warehouse"
+    local network_name = prompt("Enter a network name to broadcast on", default_network)
+    print("")
+
+    local sf = fs.open("startup.lua", "w")
+    if sf then
+        sf.write('shell.run("wpp", "host", "' .. network_name .. '")\n')
+        sf.close()
+        cprint(" [\251] startup.lua created! (will auto-host on reboot)", colors.green)
+    end
+    print("")
+
+    cprint("==========================================", colors.cyan)
+    cprint(" Setup Complete! Starting Host Mode...", colors.green)
+    cprint("==========================================", colors.cyan)
+    os.sleep(1)
+
+    shell.run("wpp", "host", network_name)
+    return
+end
+
 local periph = peripheral
 
 cprint("--- 1. Wireless Networking ---", colors.cyan)
@@ -41,9 +112,11 @@ local enable_wireless = wireless_ans:lower() == "y"
 local wireless_network = "warehouse_net"
 
 if enable_wireless then
+    local player_name = prompt(" What is your Player Name?", "Player")
+    local default_network = player_name .. "_warehouse"
     cprint(" Make sure your remote computer is broadcasting its peripherals.", colors.white)
-    cprint(" (e.g. running 'wpp host <network_name>')", colors.lightGray)
-    wireless_network = prompt(" Enter your wireless network name", "warehouse_net")
+    cprint(" (e.g. running 'wpp host " .. default_network .. "')", colors.lightGray)
+    wireless_network = prompt(" Enter your wireless network name", default_network)
     
     cprint(" Downloading CC-WirelessPeripheral...", colors.yellow)
     if http then
