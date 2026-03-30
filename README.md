@@ -50,15 +50,12 @@ If you'd like your monitors positioned far away from the main colony/storage are
 **How to set it up:**
 1. Attach an **Ender Modem** or regular **Wireless Modem** to the main Warehost computer.
 2. Build a new remote computer wherever you want your display, and attach your **Monitor(s)** and a **Wireless Modem** to it.
-3. On this new remote computer, install the wireless host script by typing:
+3. On this new remote computer, run the Remote Auto-Setup installer:
    ```shell
-   wget https://raw.githubusercontent.com/jdf221/CC-WirelessPeripheral/main/wpp.lua wpp.lua
+   wget run https://raw.githubusercontent.com/KilianSen/cc-tweaked-refinedstorage-minecolonies-integration/main/setup_remote.lua
    ```
-4. Start broadcasting the monitors by running the following command on the remote computer (you can replace `warehouse_net` with any network name you choose):
-   ```shell
-   wpp host warehouse_net
-   ```
-5. Finally, on your **main** Warehost computer, run the `install.lua` installer. When asked to "Enable Wireless Peripherals", type **y** and enter the same network name (`warehouse_net`). Warehost will automatically connect and render your dashboard remotely!
+4. Follow the prompt to name your network (default is `warehouse_net`). This will automatically download the necessary dependencies and set your monitors to broadcast on startup!
+5. Finally, on your **main** Warehost computer, run the primary `install.lua` installer. When asked to "Enable Wireless Peripherals", type **y** and enter the same network name (`warehouse_net`). Warehost will automatically connect and render your dashboard remotely!
 
 ---
 
