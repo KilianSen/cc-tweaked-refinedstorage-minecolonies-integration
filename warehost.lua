@@ -38,6 +38,7 @@ local default_config = {
     enable_equipment_delivery = false,
     enable_wireless = false,
     wireless_network = "warehouse_net",
+    enable_auto_update = true,
     skip_patterns = {
         "Tool of class", "Hoe", "Shovel", "Axe", "Pickaxe", "Bow",
         "Sword", "Shield", "Helmet", "Leather Cap", "Chestplate",
@@ -78,6 +79,49 @@ else
         f.write(textutils.serializeJSON(config))
         f.close()
         print("Created default config.json")
+    end
+end
+
+----------------------------------------------------------------------------
+-- AUTO UPDATER
+----------------------------------------------------------------------------
+
+if config.enable_auto_update then
+    print("Checking for updates...")
+    if http then
+        local url = "https://raw.githubusercontent.com/KilianSen/cc-tweaked-refinedstorage-minecolonies-integration/main/warehost.lua"
+        local request = http.get(url)
+        if request then
+            local remote_code = request.readAll()
+            request.close()
+            
+            local current_code = ""
+            local program_path = shell.getRunningProgram()
+            local local_file = fs.open(program_path, "r")
+            if local_file then
+                current_code = local_file.readAll()
+                local_file.close()
+            end
+            
+            if remote_code and #remote_code > 0 and remote_code ~= current_code then
+                print("Update found! Applying update...")
+                local out_file = fs.open(program_path, "w")
+                if out_file then
+                    out_file.write(remote_code)
+                    out_file.close()
+                    print("Update complete! Restarting script...")
+                    os.sleep(1)
+                    shell.run(program_path)
+                    return
+                end
+            else
+                print("Script is up to date.")
+            end
+        else
+            print("WARNING: Could not reach GitHub for updates.")
+        end
+    else
+        print("WARNING: http API is disabled. Auto-updater cannot run.")
     end
 end
 
